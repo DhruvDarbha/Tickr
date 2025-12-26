@@ -6,12 +6,13 @@ import requests
 import json
 from datetime import datetime, timedelta
 import pytz
+import pandas as pd
 
 def test_marketaux_single_date():
     """Test Marketaux API with a single date to verify JSON response."""
     
     # API key
-    api_key = "xCJ5QFoH9ZagupfWkj7RI2LNpO8QTyZomT1PSEAm"
+    api_key = "6hV3UI51G9IwfgEZ1Yg7oQBQ6QP5zwCcMF5k3lnR"
     
     # Test parameters
     ticker = "AAPL"
@@ -89,6 +90,125 @@ def test_marketaux_single_date():
                                 print(f"      Name: {entity.get('name', 'N/A')}")
                                 print(f"      Sentiment Score: {entity.get('sentiment_score', 'N/A')}")
                                 print(f"      Match Score: {entity.get('match_score', 'N/A')}")
+                        
+                        # Create DataFrame with timestamps
+                        print(f"\n  {'='*70}")
+                        print(f"  Creating DataFrame with timestamps...")
+                        print(f"  {'='*70}")
+                        
+                        df_data = []
+                        for article in articles:
+                            # Extract published_at timestamp
+                            pub_time_str = article.get('published_at')
+                            if pub_time_str:
+                                # Parse timestamp
+                                try:
+                                    pub_time = pd.to_datetime(pub_time_str, utc=True)
+                                    if pub_time.tzinfo is None:
+                                        pub_time = pytz.UTC.localize(pub_time.to_pydatetime())
+                                    else:
+                                        pub_time = pub_time.astimezone(pytz.UTC)
+                                except:
+                                    pub_time = None
+                            else:
+                                pub_time = None
+                            
+                            # Extract sentiment for the ticker
+                            sentiment_score = None
+                            entities = article.get('entities', [])
+                            for entity in entities:
+                                if entity and entity.get('symbol') == ticker:
+                                    sentiment_score = entity.get('sentiment_score')
+                                    break
+                            
+                            if sentiment_score is None:
+                                sentiment_score = 0.0
+                            else:
+                                sentiment_score = float(sentiment_score)
+                            
+                            df_data.append({
+                                'published_at': pub_time,
+                                'ticker': ticker,
+                                'sentiment': sentiment_score,
+                                'title': article.get('title', ''),
+                                'source': article.get('source', ''),
+                                'url': article.get('url', '')
+                            })
+                        
+                        # Create DataFrame
+                        df = pd.DataFrame(df_data)
+                        
+                        # Ensure published_at is datetime
+                        df['published_at'] = pd.to_datetime(df['published_at'], utc=True)
+                        
+                        # Sort by timestamp
+                        df = df.sort_values('published_at').reset_index(drop=True)
+                        
+                        print(f"\n  DataFrame created:")
+                        print(f"    Shape: {df.shape}")
+                        print(f"    Columns: {list(df.columns)}")
+                        print(f"\n  DataFrame Preview:")
+                        print(df[['published_at', 'ticker', 'sentiment', 'title']].head())
+                        
+                        # Create a copy with just timestamp, ticker, and sentiment
+                        df_copy = df[['published_at', 'ticker', 'sentiment']].copy()
+                        print(f"\n  Copied DataFrame (timestamp, ticker, sentiment only):")
+                        print(f"    Shape: {df_copy.shape}")
+                        print(f"\n  Copied DataFrame Preview:")
+                        print(df_copy)
+                        
+                        # Simulate what it would look like with more data (based on previous run)
+                        print(f"\n  {'='*70}")
+                        print(f"  Simulated DataFrame (based on previous API response):")
+                        print(f"  {'='*70}")
+                        
+                        # Create simulated data based on what we saw in the previous run
+                        simulated_data = [
+                            {
+                                'published_at': pd.to_datetime('2025-12-25T22:07:35.000000Z', utc=True),
+                                'ticker': 'AAPL',
+                                'sentiment': 0.5682
+                            },
+                            {
+                                'published_at': pd.to_datetime('2025-12-25T21:07:30.000000Z', utc=True),
+                                'ticker': 'AAPL',
+                                'sentiment': 0.93
+                            },
+                            {
+                                'published_at': pd.to_datetime('2025-12-25T19:07:38.000000Z', utc=True),
+                                'ticker': 'AAPL',
+                                'sentiment': 0.76595
+                            },
+                            {
+                                'published_at': pd.to_datetime('2025-12-26T08:33:39.000000Z', utc=True),
+                                'ticker': 'AAPL',
+                                'sentiment': 0.212
+                            },
+                            {
+                                'published_at': pd.to_datetime('2025-12-26T06:23:02.000000Z', utc=True),
+                                'ticker': 'AAPL',
+                                'sentiment': 0.44865
+                            }
+                        ]
+                        
+                        simulated_df = pd.DataFrame(simulated_data)
+                        simulated_df['published_at'] = pd.to_datetime(simulated_df['published_at'], utc=True)
+                        simulated_df = simulated_df.sort_values('published_at').reset_index(drop=True)
+                        
+                        print(f"\n  Simulated DataFrame:")
+                        print(f"    Shape: {simulated_df.shape}")
+                        print(f"    Date Range: {simulated_df['published_at'].min()} to {simulated_df['published_at'].max()}")
+                        print(f"    Sentiment Range: {simulated_df['sentiment'].min():.3f} to {simulated_df['sentiment'].max():.3f}")
+                        print(f"\n  Full Simulated DataFrame:")
+                        print(simulated_df.to_string())
+                        
+                        print(f"\n  DataFrame Info:")
+                        print(f"    Dtypes:")
+                        print(f"      published_at: {simulated_df['published_at'].dtype}")
+                        print(f"      ticker: {simulated_df['ticker'].dtype}")
+                        print(f"      sentiment: {simulated_df['sentiment'].dtype}")
+                        print(f"    Memory usage: {simulated_df.memory_usage(deep=True).sum() / 1024:.2f} KB")
+                        
                     else:
                         print("\n  ⚠️  No articles in response!")
                 else:

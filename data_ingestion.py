@@ -497,13 +497,16 @@ def fetch_company_news(
             # Fallback: fetch articles from entire date range (up to 100 articles)
             print(f"\n[DEBUG] No articles found from specific dates, trying fallback for entire date range...")
             try:
+                # Use date format without time (Y-m-d) for published_after/published_before
+                # API accepts: Y-m-d\TH:i:s | Y-m-d\TH:i | Y-m-d\TH | Y-m-d | Y-m | Y
+                # We'll use Y-m-d format (simplest)
                 start_str = start_date.strftime('%Y-%m-%d')
                 end_str = end_date.strftime('%Y-%m-%d')
                 params = {
                     'api_token': marketaux_api_key,
                     'symbols': ticker,
-                    'published_after': start_str,
-                    'published_before': end_str,
+                    'published_after': start_str,  # Format: Y-m-d (no time, no Z)
+                    'published_before': end_str,   # Format: Y-m-d (no time, no Z)
                     'limit': 100,
                     'page': 1
                 }
