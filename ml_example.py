@@ -13,6 +13,7 @@ import pytz
 from feature_engineering import align_dataframes, get_feature_columns
 from trading_model import TradingModel
 from train_trading_model import train_trading_model, get_trading_recommendation, print_trading_recommendation
+from load_data import load_news_for_ticker
 
 
 def create_sample_data():
@@ -96,10 +97,26 @@ def main():
     print("ML Model Architecture Example")
     print("="*70)
     
-    # Create sample data
-    print("\n1. Creating sample data...")
-    news_df, ohlcv_df, prices_df, quarterly_df = create_sample_data()
+    # Try to load real MSFT news data first
+    print("\n1. Loading data...")
+    print("   Attempting to load MSFT news from CSV...")
+    try:
+        news_df = load_news_for_ticker('MSFT')
+        if not news_df.empty:
+            print(f"   ✓ Loaded {len(news_df)} real MSFT news articles from CSV!")
+        else:
+            print("   No CSV found, using sample data...")
+            news_df, ohlcv_df, prices_df, quarterly_df = create_sample_data()
+    except Exception as e:
+        print(f"   CSV loading failed: {e}")
+        print("   Using sample data instead...")
+        news_df, ohlcv_df, prices_df, quarterly_df = create_sample_data()
     
+    # If we loaded real news, still need sample data for other sources
+    if 'ohlcv_df' not in locals():
+        _, ohlcv_df, prices_df, quarterly_df = create_sample_data()
+    
+    print(f"\n   Data Summary:")
     print(f"   News articles: {len(news_df)}")
     print(f"   OHLCV records: {len(ohlcv_df)}")
     print(f"   Price records: {len(prices_df)}")

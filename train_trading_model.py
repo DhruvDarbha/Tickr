@@ -24,6 +24,7 @@ import warnings
 from feature_engineering import align_dataframes, get_feature_columns
 from trading_model import TradingModel
 from data_ingestion import ingest_all_data
+from load_data import load_news_for_ticker
 
 warnings.filterwarnings('ignore')
 
@@ -190,14 +191,29 @@ def get_trading_recommendation(
     ohlcv_df: pd.DataFrame,
     prices_df: pd.DataFrame,
     quarterly_df: pd.DataFrame,
-    current_price: float
+    current_price: float,
+    ticker: Optional[str] = None
 ) -> Dict:
     """
     Get trading recommendation for current market conditions.
     
+    Args:
+        model: Trained TradingModel
+        news_df: News DataFrame (can load from CSV if needed)
+        ohlcv_df: OHLCV DataFrame
+        prices_df: Prices DataFrame
+        quarterly_df: Quarterly reports DataFrame
+        current_price: Current stock price
+        ticker: Optional ticker to reload news if needed
+    
     Returns:
         Dictionary with trading recommendation
     """
+    # If news_df is empty and ticker provided, try loading from CSV
+    if news_df.empty and ticker:
+        from load_data import load_news_for_ticker
+        news_df = load_news_for_ticker(ticker)
+    
     # Prepare features
     features_df = align_dataframes(
         news_df=news_df,
@@ -318,21 +334,39 @@ def main():
     print("Loading Data")
     print("="*70)
     
-    if args.marketaux_key:
-        print(f"Fetching data for {args.ticker}...")
+    # Try to load news from CSV first
+    print(f"Loading news data from CSV for {args.ticker}...")
+    news_df = load_news_for_ticker(args.ticker)
+    
+    # If CSV loading failed or returned empty, try API
+    if news_df.empty and args.marketaux_key:
+        print(f"CSV not found or empty. Fetching from Marketaux API...")
         data = ingest_all_data(args.ticker, args.marketaux_key)
         news_df = data['news_df']
+    elif news_df.empty:
+        print("Warning: No news data available (no CSV found and no API key provided).")
+        news_df = pd.DataFrame(columns=['published_at', 'ticker', 'sentiment'])
+    
+    # Load other data sources (OHLCV, prices, quarterly)
+    # For now, these will be empty until data is available
+    if args.marketaux_key:
+        print(f"Fetching other data for {args.ticker}...")
+        data = ingest_all_data(args.ticker, args.marketaux_key)
+        # Don't overwrite news_df if we loaded from CSV
+        if news_df.empty:
+            news_df = data['news_df']
         ohlcv_df = data['prices_df']
         prices_df = data['latest_price_df']
         quarterly_df = data['financials_df']
     else:
-        print("Warning: No Marketaux API key. Using empty dataframes.")
-        news_df = pd.DataFrame(columns=['published_at', 'ticker', 'sentiment'])
+        print("Note: Other data sources (OHLCV, prices, quarterly) not yet available.")
+        print("Using empty dataframes for these. They will be added soon.")
         ohlcv_df = pd.DataFrame(columns=['timestamp', 'ticker', 'open', 'high', 'low', 'close', 'volume'])
         prices_df = pd.DataFrame(columns=['timestamp', 'ticker', 'price'])
         quarterly_df = pd.DataFrame(columns=['report_date', 'ticker', 'revenue', 'net_income', 'eps',
                                             'operating_cash_flow', 'total_assets', 'total_liabilities'])
     
+    print(f"\nData Summary:")
     print(f"  News articles: {len(news_df)}")
     print(f"  OHLCV records: {len(ohlcv_df)}")
     print(f"  Price records: {len(prices_df)}")
@@ -356,13 +390,21 @@ def main():
     # Get current recommendation
     if not ohlcv_df.empty and 'close' in ohlcv_df.columns:
         current_price = ohlcv_df['close'].iloc[-1]
+    elif not prices_df.empty and 'price' in prices_df.columns:
+        current_price = prices_df['price'].iloc[-1]
+    else:
+        print("\nWarning: No current price available. Cannot generate recommendation.")
+        current_price = None
+    
+    if current_price:
         recommendation = get_trading_recommendation(
             model=model,
             news_df=news_df,
             ohlcv_df=ohlcv_df,
             prices_df=prices_df,
             quarterly_df=quarterly_df,
-            current_price=current_price
+            current_price=current_price,
+            ticker=args.ticker
         )
         print_trading_recommendation(recommendation)
     
