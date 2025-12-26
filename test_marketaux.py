@@ -8,6 +8,11 @@ from datetime import datetime, timedelta
 import pytz
 import pandas as pd
 
+# Set pandas display options to show full DataFrames
+pd.set_option('display.max_columns', None)
+pd.set_option('display.width', None)
+pd.set_option('display.max_colwidth', 100)
+
 def test_marketaux_single_date():
     """Test Marketaux API with a single date to verify JSON response."""
     
@@ -147,15 +152,18 @@ def test_marketaux_single_date():
                         print(f"\n  DataFrame created:")
                         print(f"    Shape: {df.shape}")
                         print(f"    Columns: {list(df.columns)}")
-                        print(f"\n  DataFrame Preview:")
-                        print(df[['published_at', 'ticker', 'sentiment', 'title']].head())
+                        print(f"\n  Full DataFrame:")
+                        print(df.to_string())
                         
                         # Create a copy with just timestamp, ticker, and sentiment
                         df_copy = df[['published_at', 'ticker', 'sentiment']].copy()
                         print(f"\n  Copied DataFrame (timestamp, ticker, sentiment only):")
                         print(f"    Shape: {df_copy.shape}")
-                        print(f"\n  Copied DataFrame Preview:")
-                        print(df_copy)
+                        print(f"\n  Full Copied DataFrame:")
+                        print(df_copy.to_string())
+                        
+                        # Return the DataFrame
+                        return df_copy
                         
                         # Simulate what it would look like with more data (based on previous run)
                         print(f"\n  {'='*70}")
@@ -346,8 +354,18 @@ def test_marketaux_single_date():
     print("\n" + "=" * 70)
     print("Test Complete!")
     print("=" * 70)
+    
+    return None
 
 
 if __name__ == "__main__":
-    test_marketaux_single_date()
+    result_df = test_marketaux_single_date()
+    if result_df is not None:
+        print("\n" + "=" * 70)
+        print("RETURNED DATAFRAME:")
+        print("=" * 70)
+        print(result_df.to_string())
+        print(f"\nDataFrame shape: {result_df.shape}")
+        print(f"DataFrame columns: {list(result_df.columns)}")
+        print(f"DataFrame dtypes:\n{result_df.dtypes}")
 
