@@ -67,6 +67,45 @@ def load_news_from_csv(csv_path: str, ticker: Optional[str] = None) -> pd.DataFr
     return news_df
 
 
+def load_quarterly_from_pdfs(ticker: str = 'MSFT', data_dir: str = '.') -> pd.DataFrame:
+    """
+    Load all quarterly financial data from PDF reports with scoring.
+    
+    Args:
+        ticker: Stock ticker symbol
+        data_dir: Directory containing PDF files
+    
+    Returns:
+        DataFrame with columns: [report_date, ticker, revenue, net_income, eps,
+                                operating_cash_flow, total_assets, total_liabilities,
+                                stock_impact_score]
+    """
+    from extract_all_quarterly_data import extract_all_quarterly_data
+    
+    # Extract all quarterly data with scoring
+    quarterly_df = extract_all_quarterly_data()
+    
+    # Filter by ticker if needed
+    if ticker:
+        quarterly_df = quarterly_df[quarterly_df['ticker'] == ticker.upper()].copy()
+    
+    # Select columns needed for feature engineering + stock impact score
+    required_cols = ['report_date', 'ticker', 'revenue', 'net_income', 'eps',
+                   'operating_cash_flow', 'total_assets', 'total_liabilities', 
+                   'stock_impact_score']
+    
+    # Keep base columns + stock impact score
+    quarterly_df_base = quarterly_df[required_cols].copy()
+    
+    print(f"\nLoaded {len(quarterly_df)} quarterly reports for {ticker}")
+    if len(quarterly_df) > 0:
+        print(f"  Date range: {quarterly_df['report_date'].min()} to {quarterly_df['report_date'].max()}")
+        print(f"  Average Financial Health Score: {quarterly_df['financial_health_score'].mean():.1f}/100")
+        print(f"  Latest Stock Impact: {quarterly_df['stock_impact'].iloc[-1]}")
+    
+    return quarterly_df_base
+
+
 def load_news_for_ticker(ticker: str, data_dir: str = '.') -> pd.DataFrame:
     """
     Load news data for a specific ticker from CSV file.

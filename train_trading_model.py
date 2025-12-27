@@ -24,7 +24,7 @@ import warnings
 from feature_engineering import align_dataframes, get_feature_columns
 from trading_model import TradingModel
 from data_ingestion import ingest_all_data
-from load_data import load_news_for_ticker
+from load_data import load_news_for_ticker, load_quarterly_from_pdfs
 
 warnings.filterwarnings('ignore')
 
