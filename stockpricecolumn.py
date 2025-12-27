@@ -28,11 +28,6 @@ for t, g in df.groupby("ticker"):
     end = g["price_date"].max() + pd.Timedelta(days=1)
 
     hist = yf.download(t, start=start, end=end, interval="1d", auto_adjust=False, progress=False)
-    
-    # Handle MultiIndex from yfinance
-    if isinstance(hist.columns, pd.MultiIndex):
-        hist.columns = hist.columns.droplevel(1)
-    
     hist = hist.reset_index()
     hist["price_date"] = pd.to_datetime(hist["Date"]).dt.normalize()
 
@@ -47,5 +42,3 @@ df2 = pd.concat(out, ignore_index=True)
 
 # Save back to CSV
 df2.to_csv("with_prices.csv", index=False)
-print(f"Saved {len(df2)} rows with prices to with_prices.csv")
-print(f"Columns: {list(df2.columns)}")
