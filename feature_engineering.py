@@ -306,18 +306,23 @@ def align_quarterly_data(
     
     # Create full timestamp range
     quarterly_aligned = pd.DataFrame({'timestamp': pd.to_datetime(timestamps, utc=True)})
+    quarterly_aligned = quarterly_aligned.sort_values('timestamp').reset_index(drop=True)
     
     # Merge and forward fill quarterly data
     quarterly_cols = [col for col in quarterly_df.columns if col not in ['report_date', 'ticker']]
     
+    # For each quarterly column, merge using merge_asof (forward fill from report date)
     for col in quarterly_cols:
-        temp_df = quarterly_df[['report_date', col]].rename(columns={'report_date': 'timestamp'})
-        quarterly_aligned = quarterly_aligned.merge(
-            temp_df,
+        temp_df = quarterly_df[['report_date', col]].copy()
+        temp_df = temp_df.sort_values('report_date')
+        
+        # Use merge_asof to forward fill: for each timestamp, get the most recent quarterly value
+        quarterly_aligned = pd.merge_asof(
+            quarterly_aligned,
+            temp_df.rename(columns={'report_date': 'timestamp'}),
             on='timestamp',
-            how='left'
+            direction='backward'  # Get the most recent quarterly report on or before this timestamp
         )
-        quarterly_aligned[col] = quarterly_aligned[col].ffill()
     
     return quarterly_aligned
 
